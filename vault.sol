@@ -1,18 +1,21 @@
 pragma solidity ^0.8.0;
 import "./Mytoken.sol";
+import "./rewardtoken1.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract vault is ERC20{
     //stake and unstake tokens in vault
     address public owner;
     MyToken public myToken;
+    rewardtoken public RewardToken;
     address[] public allstakers;
     mapping(address => uint) public user_stake_balance;
     mapping(address => bool) public addr_staked;
 
-    constructor(MyToken _myToken) ERC20("Vault Token", "VKT"){
+    constructor(MyToken _myToken, rewardtoken _rewardtoken) ERC20("Vault Token", "VKT"){
         owner = msg.sender;
         myToken = _myToken;
+        RewardToken = _rewardtoken;
 
     }
     receive() external payable {
@@ -53,12 +56,29 @@ contract vault is ERC20{
 
     }
 
-   //function in the vault which will mint the token equal to the amount of ether received
+    //Make a function in the vault which will mint the token equal to the amount of ether received
 
         function mint() public payable OnlyOwner lock{
             //uint token_in_contract = address(this).balance;
             _mint(address(this), msg.value*10**18);
             
         }
+
+    // Update the Vault contract so that you can stake a Token and earn another token in reward. 
+    //The reward earned will be 5 Tokens per block. 
+
+    function checkblocknumber() public view returns(uint) {
+        return block.number;
+    }   
+    function reward() public {
+        //require(addr_staked[msg.sender] == true, "You have not staked yet");
+        uint reward_token= 5*block.number;
+        //user_stake_balance[msg.sender] 
+        uint mybalance = user_stake_balance[msg.sender];
+        if(mybalance>0) {
+        RewardToken.transfer(address(this), reward_token);
+        }
+
+    }
 
 }
