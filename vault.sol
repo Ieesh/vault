@@ -53,7 +53,7 @@ contract vault is ERC20{
 
     }
 
-    //Make a function in the vault which will mint the token equal to the amount of ether received
+   //function in the vault which will mint the token equal to the amount of ether received
 
         function mint() public payable OnlyOwner lock{
             //uint token_in_contract = address(this).balance;
