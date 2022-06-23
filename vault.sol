@@ -11,6 +11,10 @@ contract vault is ERC20{
     address[] public allstakers;
     mapping(address => uint) public user_stake_balance;
     mapping(address => bool) public addr_staked;
+    mapping(address=>uint) public rewards_store;
+    uint public rewardrate = 5;
+    uint public stake_lasttimestamp;
+    uint public unstake_lasttimestamp;
 
     constructor(MyToken _myToken, rewardtoken _rewardtoken) ERC20("Vault Token", "VKT"){
         owner = msg.sender;
@@ -25,6 +29,17 @@ contract vault is ERC20{
         owner == msg.sender;
         _;
     }
+    modifier stake_timestamps{
+        stake_lasttimestamp = block.timestamp;
+        //store time when any function runs
+
+        _;
+    }
+    modifier unstake_timestamps{
+        unstake_lasttimestamp= block.timestamp;
+
+        _;
+    }
     uint private unlocked = 1;
     modifier lock {
         require(unlocked == 1, "Currently in transaction state");
@@ -33,7 +48,7 @@ contract vault is ERC20{
         unlocked = 1;
     }
 
-    function stake(uint amount) public lock {
+    function stake(uint amount) public lock stake_timestamps {
         require(amount > 0, "Negative amount cannot be staked");
         myToken.transferFrom(msg.sender, address(this), amount);
         user_stake_balance[msg.sender] += amount;
@@ -42,7 +57,7 @@ contract vault is ERC20{
         }
 
     //unstake tokens
-    function unstake(uint amount) public lock{
+    function unstake(uint amount) public lock unstake_timestamps{
         require(amount > 0, "Enter a positive amount");
         uint balance_of_unstaker = user_stake_balance[msg.sender];
         require(balance_of_unstaker >0, "You do not have enough balance");
@@ -50,8 +65,12 @@ contract vault is ERC20{
         myToken.transfer(msg.sender, balance_of_unstaker);
         balance_of_unstaker =  user_stake_balance[msg.sender] - amount;
         if(user_stake_balance[msg.sender] == 0) {
-        addr_staked[msg.sender] = false;
+            uint reward_storage = (unstake_lasttimestamp - stake_lasttimestamp) * rewardrate;
+            rewards_store[msg.sender] = reward_storage;
+            RewardToken.transfer(address(this), reward_storage);
+            rewards_store[msg.sender] = 0;
 
+        addr_staked[msg.sender] = false;
         }
 
     }
@@ -70,15 +89,22 @@ contract vault is ERC20{
     function checkblocknumber() public view returns(uint) {
         return block.number;
     }   
-    function reward() public {
+    //function reward() public {
         //require(addr_staked[msg.sender] == true, "You have not staked yet");
-        uint reward_token= 5*block.number;
+        //uint reward_token= 5*block.number;
         //user_stake_balance[msg.sender] 
-        uint mybalance = user_stake_balance[msg.sender];
-        if(mybalance>0) {
-        RewardToken.transfer(address(this), reward_token);
-        }
+        //uint mybalance = user_stake_balance[msg.sender];
+        //if(mybalance>0) {
+        //RewardToken.transfer(address(this), reward_token);
+       // }
 
-    }
+    //}
+    //Whenever user stakes record the information along with the block number at which he is staking.
+    //The reward will be 5 Tokens per block… and Number of blocks will be the current block minus the time at which the user has staked.
+
+    function reward_token() public {
+        uint reward_storage = (unstake_lasttimestamp - stake_lasttimestamp) * rewardrate;
+        rewards_store[msg.sender] = reward_storage;
+    } 
 
 }
