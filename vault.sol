@@ -16,6 +16,15 @@ contract vault is ERC20{
     uint public stake_lasttimestamp;
     uint public unstake_lasttimestamp;
 
+    uint public claim_block;
+    struct user_info{
+        uint amount_that_staked;
+        uint claimed_amount;
+        uint start_block;
+    }
+    user_info public userinfo;
+
+
     constructor(MyToken _myToken, rewardtoken _rewardtoken) ERC20("Vault Token", "VKT"){
         owner = msg.sender;
         myToken = _myToken;
@@ -40,6 +49,11 @@ contract vault is ERC20{
 
         _;
     }
+    //modifier stake_block{
+      //  userinfo.start_block = block.number;
+       // _;
+   // }
+
     uint private unlocked = 1;
     modifier lock {
         require(unlocked == 1, "Currently in transaction state");
@@ -48,13 +62,21 @@ contract vault is ERC20{
         unlocked = 1;
     }
 
-    function stake(uint amount) public lock stake_timestamps {
+    function stake(uint amount) public lock{
         require(amount > 0, "Negative amount cannot be staked");
+        userinfo.start_block = block.number;
+        userinfo.amount_that_staked = amount;
         myToken.transferFrom(msg.sender, address(this), amount);
         user_stake_balance[msg.sender] += amount;
         allstakers.push(msg.sender);
         addr_staked[msg.sender]= true;
         }
+
+    function claim() public returns(uint) {
+        claim_block = block.number;   
+        userinfo.claimed_amount = (claim_block - userinfo.amount_that_staked) * 5;
+        return userinfo.claimed_amount;
+    }    
 
     //unstake tokens
     function unstake(uint amount) public lock unstake_timestamps{
@@ -65,11 +87,10 @@ contract vault is ERC20{
         myToken.transfer(msg.sender, balance_of_unstaker);
         balance_of_unstaker =  user_stake_balance[msg.sender] - amount;
         if(user_stake_balance[msg.sender] == 0) {
-            uint reward_storage = (unstake_lasttimestamp - stake_lasttimestamp) * rewardrate;
-            rewards_store[msg.sender] = reward_storage;
-            RewardToken.transfer(address(this), reward_storage);
-            rewards_store[msg.sender] = 0;
-
+            //uint reward_storage = (unstake_lasttimestamp - stake_lasttimestamp) * rewardrate;
+            //rewards_store[msg.sender] = reward_storage;
+            //RewardToken.transfer(address(this), reward_storage);
+            //rewards_store[msg.sender] = 0;
         addr_staked[msg.sender] = false;
         }
 
@@ -86,25 +107,31 @@ contract vault is ERC20{
     // Update the Vault contract so that you can stake a Token and earn another token in reward. 
     //The reward earned will be 5 Tokens per block. 
 
-    function checkblocknumber() public view returns(uint) {
-        return block.number;
-    }   
+    //function checkblocknumber() public view returns(uint) {
+       // return block.number;
+    //}   
     //function reward() public {
         //require(addr_staked[msg.sender] == true, "You have not staked yet");
         //uint reward_token= 5*block.number;
         //user_stake_balance[msg.sender] 
         //uint mybalance = user_stake_balance[msg.sender];
         //if(mybalance>0) {
-        //RewardToken.transfer(address(this), reward_token);
+        //RewardToken.transfer(msg.sender, reward_token);
        // }
 
     //}
     //Whenever user stakes record the information along with the block number at which he is staking.
-    //The reward will be 5 Tokens per block… and Number of blocks will be the current block minus the time at which the user has staked.
+    //The reward will be 5 Tokens per block… and Number of blocks will be the current block minus the block number at which the user has staked.
 
-    function reward_token() public {
-        uint reward_storage = (unstake_lasttimestamp - stake_lasttimestamp) * rewardrate;
-        rewards_store[msg.sender] = reward_storage;
-    } 
+    //function reward_token() public {
+        //uint reward_storage = (unstake_lasttimestamp - stake_lasttimestamp) * rewardrate;
+        //rewards_store[msg.sender] = reward_storage;
+        //uint reward_store
+    //}
+
+    //function view_reward() public view returns(uint) {
+        //return block.number;
+    //}
+     
 
 }
