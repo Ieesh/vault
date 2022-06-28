@@ -15,14 +15,17 @@ contract vault is ERC20{
     uint public rewardrate = 5;
     uint public stake_lasttimestamp;
     uint public unstake_lasttimestamp;
+    //address public add1r;
 
-    uint public claim_block;
+  //uint public claim_block;
     struct user_info{
         uint amount_that_staked;
         uint claimed_amount;
         uint start_block;
     }
     user_info public userinfo;
+    mapping(address => user_info) public userinfoarr;
+    event givereward(address addr, uint tokenAmount);
 
 
     constructor(MyToken _myToken, rewardtoken _rewardtoken) ERC20("Vault Token", "VKT"){
@@ -73,10 +76,24 @@ contract vault is ERC20{
         }
 
     function claim() public returns(uint) {
-        claim_block = block.number;   
-        userinfo.claimed_amount = (claim_block - userinfo.amount_that_staked) * 5;
+        uint claim_block = block.number;   
+        userinfo.claimed_amount = (claim_block - userinfo.start_block) * 5;
         return userinfo.claimed_amount;
-    }    
+    }  
+
+    function pendingReward() public view returns(uint) {
+        uint currentBlock = block.number;
+        uint elapsedBlock = (currentBlock - userinfoarr[msg.sender].start_block) * rewardrate;
+        return elapsedBlock;
+    }
+    function claimMyReward() public {
+        uint _claim = pendingReward();
+        require(_claim >=0, "Not a valid claim");
+        require(userinfoarr[msg.sender].claimed_amount >0, "You have no amount to claim");
+        _mint(msg.sender, _claim);
+        emit givereward(msg.sender, _claim);
+        
+    }
 
     //unstake tokens
     function unstake(uint amount) public lock unstake_timestamps{
